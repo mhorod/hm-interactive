@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <title>Hindley-Milner</title>
+</head>
+
+<body>
+    <main>
+        <h1>
+            Hindley-Milner type system
+        </h1>
+
+        <section>
+            <h2> Introduction </h2>
+            Programming languages use types. <br>
+            Types are great because they introduce some structure to the code and help us reason about it. <br>
+            However explicit type annotations are often tedious and error-prone, therefore
+            many modern compilers can infer those types automatically. <br>
+            <br>
+            In this article we will take a look at one of the most basic type system
+            and inferrence algorithm that is used in functional programming languages - Hindley-Milner.
+
+        </section>
+
+        <section>
+            <h2>Language definition</h2>
+            First we shall define a simple language that we will use to demonstrate the type system.
+            It will have the following syntax:
+            <pre>
+            <code language="haskell">-- A comment
+
+let x = 1               -- Variable definition
+\x -> x                 -- Lambda 
+f x                     -- Function application 
+let f = \x -> f x       -- Recursive function definition
+x where x = 1, y = 2    -- Where clause</code>
+        </pre>
+
+            Along with the following types:
+            <pre>
+         <code>-- Primitive types
+Int
+Bool
+
+-- Function types
+x -> y
+(x -> y) -> z
+
+-- Type schemes (polymorphic types)
+a => a
+a => a -> a
+a => b => (a -> b) -> a -> b</code>
+        </pre>
+
+            We would like to take any valid expression in our language and return its (most generic) type
+            or a type error if the expression is not well typed.
+            <br>
+            For example, consider following expressions and their types:
+            <pre>
+            <code class="haskell">-- Expressions and their types
+
+1                   : Int
+True                : Bool
+let f = \x -> f x   : a => b => a -> b
+\x -> x             : a => a -> a
+x where x = 1       : Int
+(\x -> x) 1         : Int
+</code>
+    </pre>
+        </section>
+
+        <section>
+            <h2>Type inference</h2>
+            Let's begin with inferring the type of a lambda <code> \arg -> body </code>
+            (We'll see why in a moment) <br>
+            We would like to infer the type of body, 
+            but we currently miss the type of <code>arg</code> which most likely is used in the body.
+            To solve this problem we introduce a <i>context</i>. <br>
+            The context is a mapping from names to schemes. <br>
+
+            Now we can create new type variable for <code>arg</code>, wrap it in a scheme 
+            and add it to the context. <br>
+            <pre>
+    <code class="javascript">
+function infer_lambda(context, arg, body) {
+    // Copy the context and add type of the arg
+    const body_context = new Map(context);
+    const arg_type = new TypeScheme([], TypeVariable.new()); 
+    body_context.set(arg_name, arg_type)
+
+    // Infer the body
+    const body_type = infer(body_context, body);
+
+    // The result is the function type of arg -> body    
+    return new FunctionType(arg_type, body_type);
+}
+    </code>
+</pre>
+
+            But what happens if we learn something about the arg while inferring the body? <br>
+            Consider expression <code>\f -> f 1</code> <br>
+            Assuming we can infer the type of <code>f 1</code> our function would return something like <code> t0 -> t1 </code>
+            yet we see that the actual type is <code>(Int -> a) -> a</code>.
+            <br>
+            Therefore we need to return additional information about types we encounter.
+            <br>
+
+            <section>
+                <h3> Substitution </h3>
+                We will return a substitution i.e. a mapping from type variables to types and denote it by
+                <code> {x: t1, y: t2} </code>
+                meaning: "<code>x</code> is replaced by <code>t1</code>, <code>y</code> is replaced by <code>t2</code>" <br>
+                By <code> S T </code> we mean "apply substitution S to type T" 
+                <br>
+                Application of substitution is pretty straightforward:
+                <ul>
+                    <li> for primitive types we do nothing </li>
+                    <li> for type variables we lookup correspoding change </li>
+                    <li> for functions we recursively substitute argument and body types </li>
+                    <li> for type schemes we first exclude scheme parameters and then we substitute the type</li>
+                </ul>
+
+                <br>
+                Examples:
+                <pre><code class="language-haskell">
+{a: b} Int = Int              -- Primitive types are not affected by substitutions
+{a: (b -> c)} a = (b -> c)    -- Substitution of a type variable
+{a: b} c = c                  -- Substitution of a type variable that is not affected
+{a: b} (a -> b) = (b -> b)    -- Substitution of a function type
+-- Applying substitution to a scheme replaces only unbound type variables
+{a: b, b: c} (a => a -> b) = (a => a -> c)
+            </code></pre>
+            <div class="try-it">
+                <h4>Try it yourself!</h4>
+                <div class="try-it-body">
+                <textarea id="substitution-application-input" class="try-it-input" placeholder="Enter expression e.g. {a: b} a"></textarea>
+                <div class="try-it-output" id="substitution-application-output">
+                </div>
+                </div>
+            </div>
+
+
+                Additionally substitutions can be composed.
+                Applying a composition of two substitutions to a type should yield the same result as applying them one
+                after another.
+                i.e. <code> (S2 S1) T = S2 (S1 T) </code>
+                <br>
+                Examples:
+                <pre><code class="language-haskell">
+{b: c} {a: b} = {a: c, b: c}    -- Second substitution is applied to the right-hand side
+                                        -- and then is appended to the composition
+{a: b} {a: c} = {a: c}            -- If both substitutions substitute the same variable, 
+                                        -- the second one is discarded
+            </code></pre>
+
+
+            </section>
+
+        </section>
+
+
+
+
+    </main>
+    <footer></footer>
+</body>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.6.0/styles/atom-one-dark.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.6.0/highlight.min.js"></script>
+<!-- and it's easy to individually load additional languages -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.6.0/languages/haskell.min.js"></script>
+<script>
+    hljs.highlightAll()
+</script>
+
+<script src="hm.js"></script>
+<script src="parser.js"></script>
+<script src="interactive.js"></script>
+
+</html>

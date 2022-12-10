@@ -153,9 +153,10 @@ function infer_lambda(context, arg, body) {
                 Examples:
                 <pre><code class="language-haskell">
 {b: c} {a: b} = {a: c, b: c}    -- Second substitution is applied to the right-hand side
-                                        -- and then is appended to the composition
-{a: b} {a: c} = {a: c}            -- If both substitutions substitute the same variable, 
-                                        -- the second one is discarded
+                                -- and then is appended to the composition
+
+{a: b} {a: c} = {a: c}          -- If both substitutions substitute the same variable, 
+                                -- the second one is discarded
             </code></pre>
 
             <div class="try-it">

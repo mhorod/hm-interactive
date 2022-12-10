@@ -116,3 +116,14 @@ function apply_substitution(substitution, type)
     else
         throw new Error("Unknown type: " + type);
 }
+
+function compose_substitutions(second, first)
+{
+    const composed = new Map();
+    for (const [key, value] of first)
+        composed.set(key, apply_substitution(second, value));
+    for (const [key, value] of second)
+        if (!composed.has(key))
+            composed.set(key, value);
+    return composed;    
+}

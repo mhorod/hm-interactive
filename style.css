@@ -7,11 +7,6 @@ body {
     color: #eee;
 }
 
-@font-face {
-    font-family: 'Fira Code';
-    src: url('FiraCode/FiraCode-VariableFont_wght.ttf');
-}
-
 main {
     margin: auto;
     max-width: 800px;
